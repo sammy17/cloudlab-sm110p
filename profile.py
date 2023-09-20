@@ -45,33 +45,37 @@ def create_request(request, role, ip, worker_num=None):
         'bash',
         "sudo bash /local/repository/bootstrap.sh '{}' 2>&1 | sudo tee -a /local/logs/setup.log".format(
             role)))
-    if params.secondNIC:
+    if params.slaveCount>0:
         iface = []
-        iface.append(req.addInterface('eth1', pg.IPv4Address(ip, '255.255.255.0')))
-        iface.append(req.addInterface('eth2', pg.IPv4Address('10.10.2.'+ip.split('.')[-1], '255.255.255.0')))
-    else:
-        iface = req.addInterface(
-          'eth1', pg.IPv4Address(ip, '255.255.255.0'))
+        if params.secondNIC:
+            # iface = []
+            iface.append(req.addInterface('eth1', pg.IPv4Address(ip, '255.255.255.0')))
+            iface.append(req.addInterface('eth2', pg.IPv4Address('10.10.2.'+ip.split('.')[-1], '255.255.255.0')))
+        else:
+            iface = req.addInterface(
+              'eth1', pg.IPv4Address(ip, '255.255.255.0'))
     return iface
 
 
 # Create a Request object to start building the RSpec.
 request = pc.makeRequestRSpec()
 
-# Link link-0
-link_0 = request.LAN('link-0')
-link_0.Site('undefined')
-if params.secondNIC:
-    link_1 = request.LAN('link-1')
-    link_1.Site('undefined')
+if params.slaveCount>0:
+    # Link link-0
+    link_0 = request.LAN('link-0')
+    link_0.Site('undefined')
+    if params.secondNIC:
+        link_1 = request.LAN('link-1')
+        link_1.Site('undefined')
 
 # Master Node
 iface = create_request(request, 'm', '10.10.1.1')
-if params.secondNIC:
-    link_0.addInterface(iface[0])
-    link_1.addInterface(iface[1])
-else:
-    link_0.addInterface(iface)
+if params.slaveCount>0:
+    if params.secondNIC:
+        link_0.addInterface(iface[0])
+        link_1.addInterface(iface[1])
+    else:
+        link_0.addInterface(iface)
 
 # Slave Nodes
 for i in range(params.slaveCount):
